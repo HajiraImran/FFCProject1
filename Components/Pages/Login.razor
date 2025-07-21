@@ -1,0 +1,341 @@
+﻿@page "/login"
+@rendermode InteractiveServer
+@using NetcodeHub.Packages.Components.Toast;
+@inject ToastService ToastService
+
+@using FFCProject.Models
+@using FFCProject.Services
+@inject NavigationManager Navigation
+@inject FFCProject.Data.AppDbContext DbContext
+@inject EmailSystem EmailSender
+@inject UserStateService UserState
+@using Microsoft.AspNetCore.Cryptography.KeyDerivation
+@using Microsoft.EntityFrameworkCore
+@implements IDisposable
+
+<Toast @ref="ToastService.ToastComponent" />
+
+<EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="login-wrapper d-flex justify-content-center align-items-center">
+        <div class="login-box text-center p-4">
+
+            <!-- ✅ FFC Logo Above Heading -->
+            <div class="text-center mb-3">
+                <img src="images/FFC-logo.png" alt="FFC Logo" class="ffc-logo mb-2" />
+            </div>
+
+            <h3 class="mb-4 text-white">Login</h3>
+
+            @if (!IsOtpStage)
+            {
+                <div class="form-group input-icon mb-3">
+                    <i class="fa fa-envelope"></i>
+                    <InputText class="form-control hover-effect" @bind-Value="loginModel.Email" placeholder="Email Address" autocomplete="email" />
+                </div>
+
+                <div class="form-group input-icon mb-3">
+                    <i class="fa fa-lock"></i>
+                    <InputText class="form-control hover-effect" type="password" @bind-Value="loginModel.Password" placeholder="Password" autocomplete="current-password" />
+                </div>
+            }
+
+            @if (IsOtpStage)
+            {
+                <div class="form-group input-icon mb-3">
+                    <i class="fa fa-key"></i>
+                    <InputText class="form-control hover-effect" @bind-Value="loginModel.OTP" placeholder="Enter OTP" autocomplete="one-time-code" />
+                </div>
+
+                <div class="text-white mb-2">
+                    ⏳ OTP expires in @OtpTimeLeft seconds
+                </div>
+
+                <button type="button"
+                        class="btn btn-sm btn-outline-light w-100 mb-3"
+                        @onclick="SendAndStartOtp"
+                        disabled="@(CanResendOtp == false || IsLoading)">
+                    🔁 Resend OTP
+                </button>
+            }
+
+            <button type="submit"
+                    class="btn btn-light w-100 mb-3"
+                    disabled="@IsLoading">
+                @if (IsLoading)
+                {
+                    <span>Logging in...</span>
+                }
+                else
+                {
+                    <span>Login</span>
+                }
+            </button>
+
+            @if (!IsOtpStage)
+            {
+                <p class="text-white">Don't have an account? <a href="/register" class="text-white">Register</a></p>
+            }
+            <p class="text-white">
+                <a href="/forgot-password" class="text-white"><u>Forgot Password?</u></a>
+            </p>
+
+        </div>
+    </div>
+</EditForm>
+
+<style>
+    .ffc-logo {
+        max-width: 120px; /* Smaller logo */
+        height: auto;
+    }
+
+    .hover-effect {
+        transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
+    }
+
+        .hover-effect:hover {
+            background-color: rgba(255, 255, 255, 0.5) !important;
+            color: black !important;
+        }
+
+    .login-wrapper {
+        height: 100vh;
+        background: linear-gradient(to bottom right, #2c2c2c, #bfa443);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .login-box {
+        width: 420px; /* Increased width */
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 15px;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 0 30px rgba(0, 0, 0, 0.4); /* Slightly darker shadow */
+    }
+
+    .form-group {
+        position: relative;
+    }
+
+    .input-icon i {
+        position: absolute;
+        top: 50%;
+        left: 10px;
+        transform: translateY(-50%);
+        color: black; /* Icons now black */
+    }
+
+    .form-control {
+        padding-left: 35px; /* space for icon */
+        background-color: rgba(255, 255, 255, 0.3);
+        border: none;
+        color: black; /* text black for better contrast */
+    }
+
+        .form-control::placeholder {
+            color: #333; /* darker placeholder for better UX */
+        }
+
+        .form-control:focus {
+            background-color: rgba(255, 255, 255, 0.4);
+            color: black;
+            box-shadow: none;
+        }
+</style>
+
+
+@code {
+    private LoginModel loginModel = new();
+    private bool IsOtpStage = false;
+    private int OtpTimeLeft;
+    private int MaxOtpAttempts = 3;
+    private int CurrentOtpAttempts = 0;
+    private bool CanResendOtp = false;
+    private bool IsLoading = false;
+
+    private Timer otpTimer;
+    private Timer resendTimer;
+
+    private async Task HandleLogin()
+    {
+        IsLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            if (!IsOtpStage)
+            {
+                var user = await DbContext.Users
+                    .FirstOrDefaultAsync(u => u.Email == loginModel.Email);
+
+                if (user == null || !VerifyPassword(loginModel.Password, user.Password))
+                {
+                    ToastService.ShowErrorToast("❌ Invalid email or password.", "Login Failed");
+                    return;
+                }
+
+                await SendAndStartOtp();
+            }
+            else
+            {
+                CurrentOtpAttempts++;
+
+                if (CurrentOtpAttempts > MaxOtpAttempts)
+                {
+                    ToastService.ShowErrorToast("❌ Too many incorrect OTP attempts.", "OTP Failed");
+                    IsOtpStage = false;
+                    loginModel.OTP = "";
+
+                    var oldOtps = DbContext.OtpEntries.Where(o => o.Email == loginModel.Email);
+                    DbContext.OtpEntries.RemoveRange(oldOtps);
+                    await DbContext.SaveChangesAsync();
+
+                    return;
+                }
+
+                var otpRecord = await DbContext.OtpEntries
+                    .OrderByDescending(o => o.Id)
+                    .FirstOrDefaultAsync(o =>
+                        o.Email == loginModel.Email &&
+                        o.OTP == loginModel.OTP &&
+                        o.Expiry > DateTime.Now);
+
+                if (otpRecord == null)
+                {
+                    var oldOtps = DbContext.OtpEntries.Where(o => o.Email == loginModel.Email);
+                    DbContext.OtpEntries.RemoveRange(oldOtps);
+                    await DbContext.SaveChangesAsync();
+
+                    ToastService.ShowErrorToast($"❌ Invalid OTP. {MaxOtpAttempts - CurrentOtpAttempts} attempts left.", "OTP Error");
+                    return;
+                }
+
+                DbContext.OtpEntries.Remove(otpRecord);
+                await DbContext.SaveChangesAsync();
+
+                UserState.SetEmail(loginModel.Email);
+                loginModel.OTP = "";
+                Navigation.NavigateTo("/dashboard", true);
+            }
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SendAndStartOtp()
+    {
+        var oldOtps = DbContext.OtpEntries.Where(o => o.Email == loginModel.Email);
+        DbContext.OtpEntries.RemoveRange(oldOtps);
+        await DbContext.SaveChangesAsync();
+
+        string otp = new Random().Next(100000, 999999).ToString();
+
+        var otpEntry = new OtpEntry
+        {
+            Email = loginModel.Email,
+            OTP = otp,
+            Expiry = DateTime.Now.AddMinutes(5)
+        };
+
+        DbContext.OtpEntries.Add(otpEntry);
+        await DbContext.SaveChangesAsync();
+
+        bool emailSent = await EmailSender.SendEmailAsync(
+            loginModel.Email,
+            "Your OTP for Login",
+            $"<p>Your OTP is: <strong>{otp}</strong></p><p>This code will expire in 5 minutes.</p>"
+        );
+
+        if (emailSent)
+        {
+            ToastService.ShowSuccessToast("✅ OTP sent to your email.", "OTP Sent");
+            IsOtpStage = true;
+            CurrentOtpAttempts = 0;
+            StartOtpCountdown();
+            StartResendCooldown();
+        }
+        else
+        {
+            ToastService.ShowErrorToast("❌ Failed to send OTP. Try again.", "Email Error");
+        }
+    }
+
+    private void StartOtpCountdown(int seconds = 300)
+    {
+        OtpTimeLeft = seconds;
+        otpTimer?.Dispose();
+        otpTimer = new Timer(async _ =>
+        {
+            if (OtpTimeLeft > 0)
+            {
+                OtpTimeLeft--;
+                await InvokeAsync(StateHasChanged);
+            }
+            else
+            {
+                otpTimer?.Dispose();
+                ToastService.ShowErrorToast("⏰ OTP expired. Please resend.", "OTP Expired");
+                IsOtpStage = false;
+                loginModel.OTP = "";
+
+                var oldOtps = DbContext.OtpEntries.Where(o => o.Email == loginModel.Email);
+                DbContext.OtpEntries.RemoveRange(oldOtps);
+                await DbContext.SaveChangesAsync();
+
+                await InvokeAsync(StateHasChanged);
+            }
+        }, null, 0, 1000);
+    }
+
+    private void StartResendCooldown(int seconds = 30)
+    {
+        CanResendOtp = false;
+        resendTimer?.Dispose();
+        resendTimer = new Timer(async _ =>
+        {
+            CanResendOtp = true;
+            resendTimer?.Dispose();
+            await InvokeAsync(StateHasChanged);
+        }, null, seconds * 1000, Timeout.Infinite);
+    }
+
+    private bool VerifyPassword(string enteredPassword, string storedPassword)
+    {
+        var parts = storedPassword.Split('.');
+        if (parts.Length != 2)
+            return false;
+
+        string salt = parts[0];
+        string storedHash = parts[1];
+        byte[] saltBytes = Convert.FromBase64String(salt);
+
+        string enteredHash = Convert.ToBase64String(KeyDerivation.Pbkdf2(
+            password: enteredPassword,
+            salt: saltBytes,
+            prf: KeyDerivationPrf.HMACSHA256,
+            iterationCount: 10000,
+            numBytesRequested: 256 / 8));
+
+        return storedHash == enteredHash;
+    }
+
+    public void Dispose()
+    {
+        otpTimer?.Dispose();
+        resendTimer?.Dispose();
+    }
+
+    public class LoginModel
+    {
+        public string Email { get; set; }
+        public string Password { get; set; }
+        public string OTP { get; set; }
+    }
+}

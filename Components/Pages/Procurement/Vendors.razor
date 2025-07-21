@@ -1,0 +1,184 @@
+﻿@page "/procurement/vendors"
+@using FFCProject.Data
+@using Microsoft.EntityFrameworkCore
+@using FFCProject.Models
+@inject AppDbContext DbContext
+@inject UserStateService UserState
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<h3 class="text-white">Vendors</h3>
+
+@if (isLoading)
+{
+    <p class="text-white">Loading...</p>
+}
+else if (!isAuthorized)
+{
+    <p class="text-danger">You are not authorized to view this page.</p>
+}
+else
+{
+    <button class="btn btn-success mb-3" @onclick="ShowAddModal">Add Vendor</button>
+
+    @if (vendors == null)
+    {
+        <p>Loading vendors...</p>
+    }
+    else if (!vendors.Any())
+    {
+        <p>No vendors found.</p>
+    }
+    else
+    {
+        <table class="table table-dark table-striped">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Contact Person</th>
+                    <th>Phone</th>
+                    <th>Email</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var v in vendors)
+                {
+                    <tr>
+                        <td>@v.Name</td>
+                        <td>@v.ContactPerson</td>
+                        <td>@v.Phone</td>
+                        <td>@v.Email</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary me-2" @onclick="() => EditVendor(v)">Edit</button>
+                            <button class="btn btn-sm btn-danger" @onclick="() => DeleteVendor(v)">Delete</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <!-- Modal for Add/Edit -->
+    @if (isModalVisible)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content text-dark">
+                    <div class="modal-header">
+                        <h5 class="modal-title">@((editingVendor.Id == 0) ? "Add Vendor" : "Edit Vendor")</h5>
+                        <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label>Name</label>
+                            <input class="form-control" @bind="editingVendor.Name" />
+                        </div>
+                        <div class="mb-3">
+                            <label>Contact Person</label>
+                            <input class="form-control" @bind="editingVendor.ContactPerson" />
+                        </div>
+                        <div class="mb-3">
+                            <label>Phone</label>
+                            <input class="form-control" @bind="editingVendor.Phone" />
+                        </div>
+                        <div class="mb-3">
+                            <label>Email</label>
+                            <input class="form-control" @bind="editingVendor.Email" />
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                        <button class="btn btn-primary" @onclick="SaveVendor">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    List<Vendor> vendors;
+    Vendor editingVendor = new Vendor();
+    bool isModalVisible = false;
+    bool isLoading = true;
+    bool isAuthorized = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Authorization check: only Procurement or Admin
+        var user = await DbContext.Users.FirstOrDefaultAsync(u => u.Email == UserState.Email);
+        if (user == null || (user.Designation?.ToLower() != "procurement" && user.Designation?.ToLower() != "admin"))
+        {
+            Navigation.NavigateTo("/login", true);
+            return;
+        }
+
+        isAuthorized = true;
+        await LoadVendors();
+        isLoading = false;
+    }
+
+    private async Task LoadVendors()
+    {
+        vendors = await DbContext.Vendors
+            .OrderBy(v => v.Name)
+            .ToListAsync();
+    }
+
+    void ShowAddModal()
+    {
+        editingVendor = new Vendor();
+        isModalVisible = true;
+    }
+
+    void EditVendor(Vendor v)
+    {
+        editingVendor = new Vendor
+        {
+            Id = v.Id,
+            Name = v.Name,
+            ContactPerson = v.ContactPerson,
+            Phone = v.Phone,
+            Email = v.Email
+        };
+        isModalVisible = true;
+    }
+
+    async Task SaveVendor()
+    {
+        if (editingVendor.Id == 0)
+        {
+            DbContext.Vendors.Add(editingVendor);
+        }
+        else
+        {
+            var existingVendor = await DbContext.Vendors.FindAsync(editingVendor.Id);
+            if (existingVendor != null)
+            {
+                existingVendor.Name = editingVendor.Name;
+                existingVendor.ContactPerson = editingVendor.ContactPerson;
+                existingVendor.Phone = editingVendor.Phone;
+                existingVendor.Email = editingVendor.Email;
+            }
+        }
+
+        await DbContext.SaveChangesAsync();
+        isModalVisible = false;
+        editingVendor = new Vendor();
+        await LoadVendors();
+    }
+
+    async Task DeleteVendor(Vendor v)
+    {
+        DbContext.Vendors.Remove(v);
+        await DbContext.SaveChangesAsync();
+        await LoadVendors();
+    }
+
+    void CloseModal()
+    {
+        isModalVisible = false;
+        editingVendor = new Vendor();
+    }
+}

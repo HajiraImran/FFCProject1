@@ -1,0 +1,166 @@
+﻿<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand d-flex align-items-center" href="" style="gap: 10px; height: 100%;">
+            <img src="images/FFC-logo.png" alt="FFC Logo" style="height: 45px; width: auto;" />
+            <span class="ffc-brand-text">Login App</span>
+        </a>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="flex-column">
+
+        <nav class="flex-column">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                    <i class="bi bi-house-door-fill me-2"></i> Home
+                </NavLink>
+            </div>
+
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="register">
+                    <i class="bi bi-person-plus-fill me-2"></i> Register
+                </NavLink>
+            </div>
+
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="dashboard">
+                    <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                </NavLink>
+            </div>
+
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="weather">
+                    <i class="bi bi-cloud-sun-fill me-2"></i> Weather
+                </NavLink>
+            </div>
+
+           
+
+            <!-- HR MENU WITH SUBMENU -->
+            <div class="nav-item px-3">
+                <a class="nav-link d-flex align-items-center justify-content-between" data-bs-toggle="collapse" href="#hrSubmenu" role="button" aria-expanded="false" aria-controls="hrSubmenu">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-person-badge-fill me-2"></i>
+                        <span>HR</span>
+                    </div>
+                    <i class="bi bi-caret-down-fill"></i>
+                </a>
+                <div class="collapse ps-4" id="hrSubmenu">
+                    <NavLink class="nav-link" href="/hr/employees">
+                        <i class="bi bi-people-fill me-2"></i> Employees
+                    </NavLink>
+                    <NavLink class="nav-link" href="/hr/attendance">
+                        <i class="bi bi-calendar-check-fill me-2"></i> Attendance
+                    </NavLink>
+                </div>
+            </div>
+
+
+
+            <div class="nav-item px-3">
+                <a class="nav-link d-flex align-items-center justify-content-between" data-bs-toggle="collapse" href="#itSubmenu" role="button" aria-expanded="false" aria-controls="itSubmenu">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-laptop-fill me-2"></i>
+                        <span>IT</span>
+                    </div>
+                    <i class="bi bi-caret-down-fill"></i>
+                </a>
+                <div class="collapse ps-4" id="itSubmenu">
+                    <NavLink class="nav-link" href="/it/assets">
+                        <i class="bi bi-hdd-fill me-2"></i> Assets
+                    </NavLink>
+                    <NavLink class="nav-link" href="/it/support">
+                        <i class="bi bi-headset me-2"></i> Support
+                    </NavLink>
+                </div>
+            </div>
+
+
+            <div class="nav-item px-3">
+                <a class="nav-link d-flex align-items-center justify-content-between" data-bs-toggle="collapse" href="#procurementSubmenu" role="button" aria-expanded="false" aria-controls="procurementSubmenu">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-bag-fill me-2"></i>
+                        <span>Procurement</span>
+                    </div>
+                    <i class="bi bi-caret-down-fill"></i>
+                </a>
+                <div class="collapse ps-4" id="procurementSubmenu">
+                    <NavLink class="nav-link" href="/procurement/orders">
+                        <i class="bi bi-cart-fill me-2"></i> Purchase Orders
+                    </NavLink>
+                    <NavLink class="nav-link" href="/procurement/vendors">
+                        <i class="bi bi-building me-2"></i> Vendors
+                    </NavLink>
+                </div>
+            </div>
+
+            <div class="nav-item px-3">
+                <NavLink href="/team" class="nav-link" activeClass="active">
+                    <i class="bi bi-people-fill me-2"></i> Team
+                </NavLink>
+            </div>
+
+
+        </nav>
+
+
+
+
+    </nav>
+</div>
+<style>
+    .nav-scrollable {
+        background: linear-gradient(to bottom, #2c2c2c, #0f0f0f); /* dark gray gradient */
+        color: white;
+        min-height: 100vh;
+        width: 250px;
+        padding-top: 20px;
+        padding-left: 10px;
+        padding-right: 10px;
+        box-shadow: inset -2px 0 5px rgba(0, 0, 0, 0.6); /* subtle inner shadow */
+    }
+
+    .nav-link {
+        color: white;
+        text-decoration: none;
+        font-weight: 500;
+        padding: 10px;
+        display: block;
+        border-radius: 4px;
+        transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+        .nav-link:hover,
+        .nav-link.active {
+            background-color: #444;
+            color: #00ffff; /* neon cyan effect */
+        }
+
+    .nav-item {
+        margin-bottom: 10px;
+    }
+
+    .ffc-brand-text {
+        font-size: 18px; /* Decrease from default (~24px) */
+        font-weight: 500; /* Normal weight */
+        font-family: 'Segoe UI', sans-serif;
+        line-height: 1;
+    }
+
+    .nav-link i.bi-caret-down-fill {
+        margin-left: auto;
+        font-size: 0.85rem;
+    }
+
+    .nav-link.d-flex {
+        padding-right: 10px; /* adjust to your sidebar padding style */
+    }
+
+   
+</style>
+    
+
+

@@ -1,0 +1,172 @@
+﻿@page "/procurement/orders"
+@using FFCProject.Data
+@using Microsoft.EntityFrameworkCore
+@using FFCProject.Models
+@inject AppDbContext DbContext
+@inject UserStateService UserState
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<h3 class="text-white">Purchase Orders</h3>
+
+@if (isLoading)
+{
+    <p class="text-white">Loading...</p>
+}
+else if (!isAuthorized)
+{
+    <p class="text-danger">You are not authorized to view this page.</p>
+}
+else
+{
+    <button class="btn btn-success mb-3" @onclick="ShowAddModal">Add Order</button>
+
+    @if (orders == null)
+    {
+        <p>Loading...</p>
+    }
+    else if (!orders.Any())
+    {
+        <p>No orders found.</p>
+    }
+    else
+    {
+        <table class="table table-dark table-striped">
+            <thead>
+                <tr>
+                    <th>Order Number</th>
+                    <th>Description</th>
+                    <th>Date Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var order in orders)
+                {
+                    <tr>
+                        <td>@order.OrderNumber</td>
+                        <td>@order.Description</td>
+                        <td>@order.DateCreated.ToShortDateString()</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary me-2" @onclick="() => EditOrder(order)">Edit</button>
+                            <button class="btn btn-sm btn-danger" @onclick="() => DeleteOrder(order)">Delete</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <!-- Modal for Add/Edit -->
+    @if (isModalVisible)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content text-dark">
+                    <div class="modal-header">
+                        <h5 class="modal-title">@((editingOrder.Id == 0) ? "Add Order" : "Edit Order")</h5>
+                        <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label>Order Number</label>
+                            <input class="form-control" @bind="editingOrder.OrderNumber" />
+                        </div>
+                        <div class="mb-3">
+                            <label>Description</label>
+                            <textarea class="form-control" @bind="editingOrder.Description"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                        <button class="btn btn-primary" @onclick="SaveOrder">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    List<PurchaseOrder> orders;
+    PurchaseOrder editingOrder = new PurchaseOrder();
+    bool isModalVisible = false;
+    bool isLoading = true;
+    bool isAuthorized = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Authorization: Only Procurement or Admin users
+        var user = await DbContext.Users.FirstOrDefaultAsync(u => u.Email == UserState.Email);
+        if (user == null || (user.Designation?.ToLower() != "procurement" && user.Designation?.ToLower() != "admin"))
+        {
+            Navigation.NavigateTo("/login", true);
+            return;
+        }
+
+        isAuthorized = true;
+        await LoadOrders();
+        isLoading = false;
+    }
+
+    private async Task LoadOrders()
+    {
+        orders = await DbContext.PurchaseOrders
+            .OrderByDescending(o => o.DateCreated)
+            .ToListAsync();
+    }
+
+    void ShowAddModal()
+    {
+        editingOrder = new PurchaseOrder();
+        isModalVisible = true;
+    }
+
+    void EditOrder(PurchaseOrder order)
+    {
+        editingOrder = new PurchaseOrder
+        {
+            Id = order.Id,
+            OrderNumber = order.OrderNumber,
+            Description = order.Description,
+            DateCreated = order.DateCreated
+        };
+        isModalVisible = true;
+    }
+
+    async Task SaveOrder()
+    {
+        if (editingOrder.Id == 0)
+        {
+            editingOrder.DateCreated = DateTime.Now;
+            DbContext.PurchaseOrders.Add(editingOrder);
+        }
+        else
+        {
+            var existingOrder = await DbContext.PurchaseOrders.FindAsync(editingOrder.Id);
+            if (existingOrder != null)
+            {
+                existingOrder.OrderNumber = editingOrder.OrderNumber;
+                existingOrder.Description = editingOrder.Description;
+            }
+        }
+
+        await DbContext.SaveChangesAsync();
+        isModalVisible = false;
+        editingOrder = new PurchaseOrder();
+        await LoadOrders();
+    }
+
+    async Task DeleteOrder(PurchaseOrder order)
+    {
+        DbContext.PurchaseOrders.Remove(order);
+        await DbContext.SaveChangesAsync();
+        await LoadOrders();
+    }
+
+    void CloseModal()
+    {
+        isModalVisible = false;
+        editingOrder = new PurchaseOrder();
+    }
+}

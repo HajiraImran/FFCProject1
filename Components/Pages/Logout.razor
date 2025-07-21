@@ -1,0 +1,24 @@
+﻿@page "/logout"
+@using FFCProject.Services
+@inject UserStateService UserState
+@inject NavigationManager Navigation
+
+@code {
+    private bool hasRedirected = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!hasRedirected)
+        {
+            hasRedirected = true;
+
+            // 🧹 Clear login state
+            UserState.Clear();
+
+            // ✅ Allow navigation after state is cleared
+            await Task.Yield();
+
+            Navigation.NavigateTo("/login", forceLoad: true);
+        }
+    }
+}

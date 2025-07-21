@@ -1,0 +1,160 @@
+﻿@page "/profile"
+@using FFCProject.Services
+@using FFCProject.Data
+@using FFCProject.Models
+@inject AppDbContext DbContext
+@inject NavigationManager Navigation
+@inject UserStateService UserState
+@using Microsoft.EntityFrameworkCore
+
+<h3 class="profile-title">Your Profile</h3>
+
+@if (user == null)
+{
+    <div class="loading-container">
+        <div class="loader"></div>
+        <p class="loading-text">Loading your profile...</p>
+    </div>
+}
+else
+{
+    <div class="profile-container">
+        <div class="profile-card">
+            <div class="profile-header">
+                <img src="https://ui-avatars.com/api/?name=@user.FirstName+@user.LastName&background=0D8ABC&color=fff&size=128" alt="Profile Picture" class="profile-picture" />
+                <h4>@user.FirstName @user.LastName</h4>
+                <p class="designation">@user.Designation</p>
+            </div>
+
+            <div class="profile-details">
+                <p><strong>Email:</strong> @user.Email</p>
+                <p><strong>Username:</strong> @user.Username</p>
+                <p><strong>Contact Number:</strong> @user.ContactNumber</p>
+                <p><strong>Address:</strong> @user.Address</p>
+                <p><strong>Postal Code:</strong> @user.PostalCode</p>
+                <p><strong>Permanent Address:</strong> @user.PermanentAddress</p>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    body {
+        margin: 0;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+        min-height: 100vh;
+    }
+
+    .profile-title {
+        text-align: center;
+        color: #fff;
+        margin-top: 40px;
+        font-size: 28px;
+        letter-spacing: 1px;
+    }
+
+    .loading-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 50vh;
+    }
+
+    .loader {
+        border: 6px solid rgba(255, 255, 255, 0.3);
+        border-top: 6px solid #fff;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+        margin-bottom: 10px;
+    }
+
+    @@keyframes spin {
+        to
+
+    {
+        transform: rotate(360deg);
+    }
+
+    }
+
+    .loading-text {
+        color: #fff;
+        font-size: 16px;
+    }
+
+    .profile-container {
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        padding: 40px 20px;
+    }
+
+    .profile-card {
+        background: rgba(255, 255, 255, 0.07);
+        padding: 30px;
+        border-radius: 16px;
+        color: #f1f1f1;
+        max-width: 500px;
+        width: 100%;
+        box-shadow: 0 8px 32px 0 rgba(0,0,0,0.37);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.18);
+        transition: transform 0.3s ease;
+    }
+
+        .profile-card:hover {
+            transform: translateY(-5px);
+        }
+
+    .profile-header {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .profile-picture {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        border: 3px solid #fff;
+        margin-bottom: 10px;
+    }
+
+    .profile-header h4 {
+        margin: 0;
+        font-size: 22px;
+    }
+
+    .designation {
+        font-size: 14px;
+        color: #ddd;
+        margin-top: 4px;
+    }
+
+    .profile-details p {
+        margin: 10px 0;
+        font-size: 15px;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        padding-bottom: 5px;
+    }
+</style>
+
+@code {
+    private User user;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (string.IsNullOrEmpty(UserState.Email))
+        {
+            Navigation.NavigateTo("/login", true);
+            return;
+        }
+
+        user = await DbContext.Users
+            .FirstOrDefaultAsync(u => u.Email == UserState.Email);
+    }
+}

@@ -1,0 +1,218 @@
+﻿@page "/dashboard"
+@using FFCProject.Services
+@using FFCProject.Data
+@using FFCProject.Models
+@inject UserStateService UserState
+@inject NavigationManager Navigation
+@inject AppDbContext DbContext
+@using Microsoft.EntityFrameworkCore
+
+@if (isLoading)
+{
+    <p class="text-white">Loading...</p>
+}
+else if (user == null)
+{
+    <p class="text-danger">Unauthorized. Redirecting...</p>
+}
+else
+{
+    <div class="dashboard-wrapper">
+        <!-- Header -->
+        <div class="header-bar">
+            <img src="images/FFC-logo.png" alt="FFC Logo" class="dashboard-logo" />
+           
+        </div>
+
+        
+        <!-- Grid Cards -->
+        <div class="dashboard-grid">
+            @if (user.Designation?.ToLower() == "hr")
+            {
+                <a class="card-button" href="/hr/employees">
+                    <i class="fas fa-users card-icon"></i>
+                    <span>Manage Employees</span>
+                </a>
+                <a class="card-button" href="/hr/attendance">
+                    <i class="fas fa-calendar-check card-icon"></i>
+                    <span>Attendance</span>
+                </a>
+            }
+            else if (user.Designation?.ToLower() == "it")
+            {
+                <a class="card-button" href="/it/support">
+                    <i class="fas fa-headset card-icon"></i>
+                    <span>IT Support</span>
+                </a>
+                <a class="card-button" href="/it/assets">
+                    <i class="fas fa-laptop-code card-icon"></i>
+                    <span>Manage Assets</span>
+                </a>
+            }
+            else if (user.Designation?.ToLower() == "procurement")
+            {
+                <a class="card-button" href="/procurement/orders">
+                    <i class="fas fa-shopping-cart card-icon"></i>
+                    <span>Purchase Orders</span>
+                </a>
+                <a class="card-button" href="/procurement/vendors">
+                    <i class="fas fa-warehouse card-icon"></i>
+                    <span>Vendors</span>
+                </a>
+            }
+
+            <!-- Common to all -->
+            <a class="card-button" href="/profile">
+                <i class="fas fa-user card-icon"></i>
+                <span>Your Profile</span>
+            </a>
+        </div>
+    </div>
+}
+
+<!-- Font Awesome -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Segoe UI', sans-serif;
+        background-color: #121212;
+    }
+
+    .dashboard-wrapper {
+        padding: 40px 20px;
+        background: linear-gradient(to bottom right, #1e1e1e, #bfa443);
+        min-height: 100vh;
+        color: #fff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .header-bar {
+        width: 100%;
+        max-width: 1200px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+    }
+
+    .dashboard-logo {
+        max-height: 60px;
+    }
+
+    .logout-btn {
+        background-color: #ff4d4d;
+        padding: 10px 20px;
+        border-radius: 8px;
+        color: #fff;
+        text-decoration: none;
+        font-weight: bold;
+        transition: background 0.3s ease, box-shadow 0.3s ease;
+    }
+
+        .logout-btn:hover {
+            background-color: #e60000;
+            box-shadow: 0 0 12px rgba(255, 0, 0, 0.5);
+        }
+
+    .welcome-text {
+        font-size: 1.8rem;
+        font-weight: 600;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 25px;
+        width: 100%;
+        max-width: 1200px;
+    }
+
+    .card-button {
+        background: rgba(255, 255, 255, 0.15); /* More contrast for black icons */
+        border-radius: 16px;
+        padding: 30px 20px;
+        color: #fff;
+        text-decoration: none;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        transition: 0.3s ease;
+        border: 1px solid transparent;
+        backdrop-filter: blur(6px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    }
+
+        .card-button:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: scale(1.04);
+            border-color: #f1c40f;
+            box-shadow: 0 0 25px rgba(241, 196, 15, 0.5);
+        }
+
+
+    .card-icon {
+        font-size: 2.8rem;
+        margin-bottom: 12px;
+        color: #000; /* Black icon color */
+        transition: transform 0.3s ease, color 0.3s ease;
+    }
+
+    .card-button:hover .card-icon {
+        transform: rotate(8deg) scale(1.1);
+        color: #f1c40f; /* Icon changes to gold on hover */
+    }
+
+    @@media screen and (max-width: 768px) {
+        .dashboard-wrapper
+
+    {
+        padding: 20px 10px;
+    }
+
+    .card-button {
+        padding: 20px;
+    }
+
+    .card-icon {
+        font-size: 2.2rem;
+    }
+
+    .welcome-text {
+        font-size: 1.4rem;
+    }
+
+    }
+</style>
+
+@code {
+    private User user;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (string.IsNullOrEmpty(UserState.Email))
+        {
+            Navigation.NavigateTo("/login", true);
+            return;
+        }
+
+        user = await DbContext.Users.FirstOrDefaultAsync(u => u.Email == UserState.Email);
+
+        if (user == null)
+        {
+            UserState.Clear();
+            Navigation.NavigateTo("/login", true);
+            return;
+        }
+
+        isLoading = false;
+    }
+}
