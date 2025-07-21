@@ -110,7 +110,7 @@ else
         var user = await DbContext.Users.FirstOrDefaultAsync(u => u.Email == UserState.Email);
         if (user == null || (user.Designation?.ToLower() != "procurement" && user.Designation?.ToLower() != "admin"))
         {
-            Navigation.NavigateTo("/login", true);
+            Navigation.NavigateTo("/unauthorized", true);
             return;
         }
 

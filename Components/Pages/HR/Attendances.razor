@@ -2,10 +2,15 @@
 @using FFCProject.Data
 @using FFCProject.Models
 @using Microsoft.EntityFrameworkCore
+@using NetcodeHub.Packages.Components.Toast;
+@inject ToastService ToastService
 @inject AppDbContext DbContext
 @inject UserStateService UserState
 @inject NavigationManager Navigation
 @rendermode InteractiveServer
+
+<Toast @ref="ToastService.ToastComponent" />
+
 
 <h3 class="text-white">Attendance Tracker</h3>
 
@@ -86,7 +91,7 @@ else
         var user = await DbContext.Users.FirstOrDefaultAsync(u => u.Email == UserState.Email);
         if (user?.Designation?.ToLower() != "hr")
         {
-            Navigation.NavigateTo("/login", true);
+            Navigation.NavigateTo("/unauthorized", true);
             return;
         }
 
@@ -120,6 +125,7 @@ else
 
         DbContext.Attendances.Add(attendanceEntry);
         await DbContext.SaveChangesAsync();
+        ToastService.ShowSuccessToast("✅ Attendance Sucessfully Updated", "Updated Successfully");
 
         // Reset form and refresh list
         attendanceEntry = new Attendance { Date = DateTime.Today };

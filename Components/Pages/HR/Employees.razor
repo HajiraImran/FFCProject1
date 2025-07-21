@@ -3,10 +3,15 @@
 @using FFCProject.Models
 @using Microsoft.EntityFrameworkCore
 @using FFCProject.Services
+@using NetcodeHub.Packages.Components.Toast;
+@inject ToastService ToastService
 @inject AppDbContext DbContext
 @inject UserStateService UserState
 @inject NavigationManager Navigation
 @rendermode InteractiveServer
+
+
+<Toast @ref="ToastService.ToastComponent" />
 
 @if (isLoading)
 {
@@ -93,7 +98,7 @@ else
     {
         if (string.IsNullOrEmpty(UserState.Email))
         {
-            Navigation.NavigateTo("/login", true);
+            Navigation.NavigateTo("/unauthorized", true);
             return;
         }
 
@@ -131,6 +136,9 @@ else
         if (currentEmployee.Id == 0)
         {
             DbContext.Employees.Add(currentEmployee);
+
+            ToastService.ShowSuccessToast("✅Employee Data Added Successfully", "Added Successfully");
+           
         }
 
         await DbContext.SaveChangesAsync();
