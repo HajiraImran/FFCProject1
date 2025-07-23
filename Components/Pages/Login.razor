@@ -217,7 +217,9 @@
                 DbContext.OtpEntries.Remove(otpRecord);
                 await DbContext.SaveChangesAsync();
 
-                UserState.SetEmail(loginModel.Email);
+                var user = await DbContext.Users.FirstOrDefaultAsync(u => u.Email == loginModel.Email);
+                UserState.SetUser(user.Email, user.Username);
+
                 loginModel.OTP = "";
                 Navigation.NavigateTo("/dashboard", true);
             }

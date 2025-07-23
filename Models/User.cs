@@ -39,5 +39,7 @@ namespace FFCProject.Models
 
         [Required(ErrorMessage = "Permanent Address is required")]
         public string PermanentAddress { get; set; }
+
+
     }
 }

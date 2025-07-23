@@ -96,7 +96,8 @@
             @if (!string.IsNullOrEmpty(UserState.Email))
             {
                 <!-- Show only username and Logout button -->
-                <span class="navbar-brand">Welcome, @UserState.Email?.Split('@')[0]</span>
+                <span class="navbar-brand">Welcome, @UserState.Username</span>
+
                 <NavLink href="/logout" class="neon-btn" activeClass="active">Logout</NavLink>
             }
             else
